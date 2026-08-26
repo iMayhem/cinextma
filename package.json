@@ -4,15 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
     "build": "next build",
+    "dev": "next dev --turbopack",
     "start": "next start",
     "lint": "next lint",
     "sb-start": "supabase start --debug --ignore-health-check",
     "sb-stop": "supabase stop --debug --all",
     "sb-restart": "supabase stop --debug --all && supabase start --debug --ignore-health-check",
     "sb-db-reset": "supabase db reset",
-    "sb-db-types": "supabase gen types typescript --local > src/utils/supabase/types.ts"
+    "sb-db-types": "supabase gen types typescript --local > src/utils/supabase/types.ts",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@bprogress/next": "^3.2.12",
@@ -23,7 +27,8 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.12",
-    "next": "16.2.1",
+    "hls.js": "^1.6.3",
+    "next": "^16.3.3",
     "next-themes": "^0.4.6",
     "nuqs": "^2.4.3",
     "react": "19.2.4",
@@ -37,11 +42,11 @@
     "use-long-press": "^3.3.0",
     "vaul": "^1.1.2",
     "yet-another-react-lightbox": "^3.25.0",
-    "zod": "^4.1.1",
-    "hls.js": "^1.6.3"
+    "zod": "^4.1.1"
   },
   "devDependencies": {
     "@iconify/react": "^6.0.0",
+    "@opennextjs/cloudflare": "^1.20.2",
     "@tailwindcss/postcss": "^4.1.12",
     "@tanstack/react-query-devtools": "^5.85.3",
     "@types/node": "^20",
@@ -54,7 +59,8 @@
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4.1.12",
     "typescript": "^5",
-    "webpack": "^5.101.2"
+    "webpack": "^5.101.2",
+    "wrangler": "^4.126.0"
   },
   "prettier": {
     "proseWrap": "never",
