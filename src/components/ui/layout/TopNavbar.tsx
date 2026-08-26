@@ -18,7 +18,7 @@ const TopNavbar = () => {
   const opacity = Math.min((y / 1000) * 5, 1);
   const hrefs = siteConfig.navItems.map((item) => item.href);
   const show = hrefs.includes(pathName);
-  const tv = pathName.includes("/tv/");
+  const tv = pathName.startsWith("/tv");
   const player = pathName.includes("/player");
   const auth = pathName.includes("/auth");
 

@@ -135,7 +135,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
                   props.nextEpisodeNumber != null
                     ? () =>
                         router.push(
-                          `/tv/${id}/${episode.season_number}/${props.nextEpisodeNumber}/player`,
+                          `/tv/player?id=${id}&season=${episode.season_number}&episode=${props.nextEpisodeNumber}`,
                         )
                     : undefined
                 }

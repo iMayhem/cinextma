@@ -1,5 +1,3 @@
-"use server";
-
 import { tmdb } from "@/api/tmdb";
 import { ActionResponse } from "@/types";
 import { isEmpty } from "@/utils/helpers";

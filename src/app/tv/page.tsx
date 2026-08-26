@@ -1,14 +1,12 @@
 "use client";
 
 import { tmdb } from "@/api/tmdb";
-import { Params } from "@/types";
 import { Spinner } from "@heroui/react";
 import { useScrollIntoView } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { notFound } from "next/navigation";
-import { Suspense, use } from "react";
+import { notFound, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
-import { NextPage } from "next";
 const PhotosSection = dynamic(() => import("@/components/ui/other/PhotosSection"));
 const TvShowRelatedSection = dynamic(() => import("@/components/sections/TV/Details/Related"));
 const TvShowCastsSection = dynamic(() => import("@/components/sections/TV/Details/Casts"));
@@ -16,8 +14,9 @@ const TvShowBackdropSection = dynamic(() => import("@/components/sections/TV/Det
 const TvShowOverviewSection = dynamic(() => import("@/components/sections/TV/Details/Overview"));
 const TvShowsSeasonsSelection = dynamic(() => import("@/components/sections/TV/Details/Seasons"));
 
-const TVShowDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
-  const { id } = use(params);
+function TVShowDetail() {
+  const searchParams = useSearchParams();
+  const id = Number(searchParams.get("id"));
   const { scrollIntoView, targetRef } = useScrollIntoView<HTMLDivElement>({
     duration: 500,
   });
@@ -39,7 +38,10 @@ const TVShowDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
         "watch/providers",
       ]),
     queryKey: ["tv-show-detail", id],
+    enabled: !!id,
   });
+
+  if (!id) notFound();
 
   if (isPending) {
     return (
@@ -72,6 +74,16 @@ const TVShowDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
       </Suspense>
     </div>
   );
-};
+}
 
-export default TVShowDetailPage;
+export default function TVShowDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <Spinner size="lg" className="absolute-center" color="warning" variant="simple" />
+      }
+    >
+      <TVShowDetail />
+    </Suspense>
+  );
+}

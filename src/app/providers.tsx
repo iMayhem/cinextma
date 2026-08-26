@@ -16,7 +16,7 @@ export default function Providers({ children }: PropsWithChildren) {
   const { push } = useRouter();
   const pathName = usePathname();
   const { content } = useDiscoverFilters();
-  const tv = pathName.includes("/tv/") || content === "tv";
+  const tv = pathName.startsWith("/tv") || content === "tv";
 
   return (
     <QueryClientProvider client={queryClient}>

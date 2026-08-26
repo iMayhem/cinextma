@@ -46,3 +46,7 @@ next-env.d.ts
 .wrangler
 .dev.vars*
 !.dev.vars.example
+.pages-output
+.open-next
+.wrangler
+out/

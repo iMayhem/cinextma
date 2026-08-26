@@ -1,19 +1,18 @@
 "use client";
 
 import { tmdb } from "@/api/tmdb";
-import { Params } from "@/types";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
-import { notFound } from "next/navigation";
-import { use } from "react";
+import { notFound, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
-import { NextPage } from "next";
 const TvShowPlayer = dynamic(() => import("@/components/sections/TV/Player/Player"));
 
-const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: number }>> = ({
-  params,
-}) => {
-  const { id, season, episode } = use(params);
+function TvShowPlayerInner() {
+  const searchParams = useSearchParams();
+  const id = Number(searchParams.get("id"));
+  const season = Number(searchParams.get("season"));
+  const episode = Number(searchParams.get("episode"));
 
   const {
     data: tv,
@@ -22,6 +21,7 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
   } = useQuery({
     queryFn: () => tmdb.tvShows.details(id),
     queryKey: ["tv-show-player-details", id],
+    enabled: !!id,
   });
 
   const {
@@ -31,7 +31,10 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
   } = useQuery({
     queryFn: () => tmdb.tvShows.season(id, season),
     queryKey: ["tv-show-season", id, season],
+    enabled: !!id && !!season,
   });
+
+  if (!id || !season || !episode) notFound();
 
   if (isPendingTv || isPendingSeason) {
     return <Spinner size="lg" className="absolute-center" color="warning" variant="simple" />;
@@ -73,6 +76,16 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
       prevEpisodeNumber={prevEpisodeNumber}
     />
   );
-};
+}
 
-export default TvShowPlayerPage;
+export default function TvShowPlayerPage() {
+  return (
+    <Suspense
+      fallback={
+        <Spinner size="lg" className="absolute-center" color="warning" variant="simple" />
+      }
+    >
+      <TvShowPlayerInner />
+    </Suspense>
+  );
+}

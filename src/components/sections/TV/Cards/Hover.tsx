@@ -98,7 +98,7 @@ const TvShowHoverCard: React.FC<{ id: number; fullWidth?: boolean }> = ({ id, fu
           <div className="flex w-full justify-between gap-2 py-1">
             <Button
               as={Link}
-              href={`/tv/${tv.id}`}
+              href={`/tv?id=${tv.id}`}
               fullWidth
               color="warning"
               variant="shadow"

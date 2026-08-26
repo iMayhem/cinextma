@@ -24,7 +24,7 @@ const MoviePlayerHeader: React.FC<MoviePlayerHeaderProps> = ({
         { "opacity-0": hidden },
       )}
     >
-      <ActionButton label="Back" href={`/movie/${id}`}>
+      <ActionButton label="Back" href={`/movie?id=${id}`}>
         <ArrowLeft size={42} />
       </ActionButton>
       <div className="absolute left-1/2 hidden -translate-x-1/2 flex-col justify-center text-center sm:flex">

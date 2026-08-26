@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use } from "react";
+import { Suspense } from "react";
 import { Spinner } from "@heroui/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { tmdb } from "@/api/tmdb";
@@ -8,16 +8,16 @@ import { Cast } from "tmdb-ts/dist/types/credits";
 import { notFound } from "next/navigation";
 import { Image } from "tmdb-ts";
 import dynamic from "next/dynamic";
-import { Params } from "@/types";
-import { NextPage } from "next";
+import { useSearchParams } from "next/navigation";
 const PhotosSection = dynamic(() => import("@/components/ui/other/PhotosSection"));
 const BackdropSection = dynamic(() => import("@/components/sections/Movie/Detail/Backdrop"));
 const OverviewSection = dynamic(() => import("@/components/sections/Movie/Detail/Overview"));
 const CastsSection = dynamic(() => import("@/components/sections/Movie/Detail/Casts"));
 const RelatedSection = dynamic(() => import("@/components/sections/Movie/Detail/Related"));
 
-const MovieDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
-  const { id } = use(params);
+function MovieDetail() {
+  const searchParams = useSearchParams();
+  const id = Number(searchParams.get("id"));
 
   const {
     data: movie,
@@ -36,7 +36,10 @@ const MovieDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
         "watch/providers",
       ]),
     queryKey: ["movie-detail", id],
+    enabled: !!id,
   });
+
+  if (!id) notFound();
 
   if (isPending) {
     return <Spinner size="lg" className="absolute-center" variant="simple" />;
@@ -57,6 +60,12 @@ const MovieDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
       </Suspense>
     </div>
   );
-};
+}
 
-export default MovieDetailPage;
+export default function MovieDetailPage() {
+  return (
+    <Suspense fallback={<Spinner size="lg" className="absolute-center" variant="simple" />}>
+      <MovieDetail />
+    </Suspense>
+  );
+}

@@ -31,7 +31,7 @@ const TvShowPlayerHeader: React.FC<TvShowPlayerHeaderProps> = ({
         { "opacity-0": hidden },
       )}
     >
-      <ActionButton label="Back" href={`/tv/${id}`}>
+      <ActionButton label="Back" href={`/tv?id=${id}`}>
         <ArrowLeft size={42} />
       </ActionButton>
       <div className="absolute left-1/2 hidden -translate-x-1/2 flex-col justify-center text-center sm:flex">
@@ -45,7 +45,7 @@ const TvShowPlayerHeader: React.FC<TvShowPlayerHeaderProps> = ({
           disabled={!prevEpisodeNumber}
           label="Previous Episode"
           tooltip="Previous Episode"
-          href={`/tv/${id}/${episode.season_number}/${prevEpisodeNumber}/player?src=${selectedSource}`}
+          href={`/tv/player?id=${id}&season=${episode.season_number}&episode=${prevEpisodeNumber}&src=${selectedSource}`}
         >
           <Prev size={42} />
         </ActionButton>
@@ -53,7 +53,7 @@ const TvShowPlayerHeader: React.FC<TvShowPlayerHeaderProps> = ({
           disabled={!nextEpisodeNumber}
           label="Next Episode"
           tooltip="Next Episode"
-          href={`/tv/${id}/${episode.season_number}/${nextEpisodeNumber}/player?src=${selectedSource}`}
+          href={`/tv/player?id=${id}&season=${episode.season_number}&episode=${nextEpisodeNumber}&src=${selectedSource}`}
         >
           <Next size={42} />
         </ActionButton>
