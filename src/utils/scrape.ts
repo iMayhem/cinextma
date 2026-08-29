@@ -33,6 +33,10 @@ export function pickBest(links: ScrapedLink[]): ScrapedLink | null {
     const hlsA = a.url.includes(".m3u8") ? 1 : 0;
     const hlsB = b.url.includes(".m3u8") ? 1 : 0;
     if (hlsA !== hlsB) return hlsB - hlsA;
+    // Prefer mp4 over mkv (mkv needs ffmpeg remux, no seeking)
+    const mkvA = a.url.toLowerCase().includes(".mkv") ? 1 : 0;
+    const mkvB = b.url.toLowerCase().includes(".mkv") ? 1 : 0;
+    if (mkvA !== mkvB) return mkvA - mkvB;
     const qA = qualityRank(a.quality);
     const qB = qualityRank(b.quality);
     if (qA !== qB) return qB - qA;
@@ -41,6 +45,10 @@ export function pickBest(links: ScrapedLink[]): ScrapedLink | null {
     if (dA !== dB) return dB - dA;
     return (a.latencyMs ?? Number.MAX_SAFE_INTEGER) - (b.latencyMs ?? Number.MAX_SAFE_INTEGER);
   })[0];
+}
+
+export function isMkvLink(link: ScrapedLink): boolean {
+  return link.url.toLowerCase().includes(".mkv");
 }
 
 export async function resolvePlayableUrl(link: ScrapedLink, forceProxy = false): Promise<string> {
