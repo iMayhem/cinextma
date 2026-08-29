@@ -38,6 +38,12 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
 
   useDocumentTitle(`Play ${title} | ${siteConfig.name}`);
 
+  // hard-stop when switching movie
+  useEffect(() => {
+    setSrc("");
+    setSelectedSource(0);
+  }, [movie.id]);
+
   const players: PlayersProps[] = useMemo(
     () =>
       links.map((l, i) => ({
@@ -57,10 +63,12 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
 
   const selectSource = useCallback(
     (index: number) => {
+      // hard-stop old stream immediately to prevent background audio
+      setSrc("");
       setSelectedSource(index);
       abort();
     },
-    [setSelectedSource, abort],
+    [abort],
   );
 
   const PLAYER: ScrapedLink | null = useMemo(

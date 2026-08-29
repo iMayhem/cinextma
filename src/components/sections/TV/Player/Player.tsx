@@ -60,6 +60,12 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     `Play ${props.seriesName} - ${props.seasonName} - ${episode.name} | ${siteConfig.name}`,
   );
 
+  // hard-stop when switching episode/series
+  useEffect(() => {
+    setSrc("");
+    setSelectedSource(0);
+  }, [id, episode.season_number, episode.episode_number]);
+
   const players: PlayersProps[] = useMemo(
     () =>
       links.map((l, i) => ({
@@ -79,10 +85,12 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
 
   const selectSource = useCallback(
     (index: number) => {
+      // hard-stop old stream immediately to prevent background audio
+      setSrc("");
       setSelectedSource(index);
       abort();
     },
-    [setSelectedSource, abort],
+    [abort],
   );
 
   const PLAYER: ScrapedLink | null = useMemo(

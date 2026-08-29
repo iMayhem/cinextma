@@ -182,7 +182,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
     };
   }, [src]);
 
-  // ── hard teardown on unmount / page hide (back navigation, bfcache) ──
+  // ── hard teardown on unmount / page hide / route change (back navigation, bfcache, SPA wander) ──
   useEffect(() => {
     const stop = () => {
       hlsRef.current?.destroy();
@@ -195,8 +195,15 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
       }
     };
     window.addEventListener("pagehide", stop);
+    window.addEventListener("popstate", stop);
+    window.addEventListener("beforeunload", stop);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") stop();
+    });
     return () => {
       window.removeEventListener("pagehide", stop);
+      window.removeEventListener("popstate", stop);
+      window.removeEventListener("beforeunload", stop);
       stop();
     };
   }, []);
