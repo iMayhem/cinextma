@@ -5,6 +5,7 @@ import { cn } from "@/utils/helpers";
 import { mutateMovieTitle } from "@/utils/movies";
 import { pickBest, qualityRank, resolvePlayableUrl, type ScrapedLink } from "@/utils/scrape";
 import { useScrapeLinks } from "@/hooks/useScrapeLinks";
+import { useSubtitles } from "@/hooks/useSubtitles";
 import type { PlayersProps } from "@/types";
 import { Card, Skeleton, Spinner } from "@heroui/react";
 import { useDisclosure, useDocumentTitle, useIdle } from "@mantine/hooks";
@@ -27,6 +28,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
   const title = mutateMovieTitle(movie);
   const year = movie.release_date?.slice(0, 4);
   const { links, status, error, abort } = useScrapeLinks({ title, year, type: "movie" });
+  const { tracks: subtitles } = useSubtitles({ title, year, tmdbId: movie.id, enabled: !!title });
 
   const idle = useIdle(3000);
   const { mobile } = useBreakpoints();
@@ -127,6 +129,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
                 subtitle={year}
                 onError={handlePlayerError}
                 quality={PLAYER.quality}
+                subtitles={subtitles}
                 autoPlay
               />
             </div>

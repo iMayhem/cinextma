@@ -4,6 +4,7 @@ import { siteConfig } from "@/config/site";
 import { cn } from "@/utils/helpers";
 import { pickBest, resolvePlayableUrl, type ScrapedLink } from "@/utils/scrape";
 import { useScrapeLinks } from "@/hooks/useScrapeLinks";
+import { useSubtitles } from "@/hooks/useSubtitles";
 import type { PlayersProps } from "@/types";
 import { Card, Skeleton, Spinner } from "@heroui/react";
 import { useDisclosure, useDocumentTitle, useIdle } from "@mantine/hooks";
@@ -47,6 +48,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     season: episode.season_number,
     episode: episode.episode_number,
   });
+  const { tracks: subtitles } = useSubtitles({ title: props.seriesName, year, tmdbId: id, enabled: !!props.seriesName });
 
   const router = useRouter();
   const { mobile } = useBreakpoints();
@@ -138,6 +140,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
                 title={props.seriesName}
                 subtitle={`${props.seasonName} · E${episode.episode_number} · ${episode.name}`}
                 quality={PLAYER.quality}
+                subtitles={subtitles}
                 autoPlay
                 onNext={
                   props.nextEpisodeNumber != null

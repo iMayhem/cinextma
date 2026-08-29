@@ -4,6 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { cn } from "@/utils/helpers";
 
+interface SubtitleTrack {
+  label: string;
+  src: string;
+  lang: string;
+  default?: boolean;
+}
+
 interface NetflixPlayerProps {
   src: string;
   title: string;
@@ -12,6 +19,8 @@ interface NetflixPlayerProps {
   autoPlay?: boolean;
   onNext?: () => void;
   onError?: () => void;
+  subtitles?: SubtitleTrack[];
+  onSubtitleChange?: (track: SubtitleTrack | null) => void;
 }
 
 const formatTime = (t: number): string => {
@@ -100,6 +109,8 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
   autoPlay = true,
   onNext,
   onError,
+  subtitles = [],
+  onSubtitleChange,
 }) => {
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
@@ -124,6 +135,8 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [barWidth, setBarWidth] = useState(0);
   const [seekHover, setSeekHover] = useState(false);
+  const [selectedSub, setSelectedSub] = useState<string | null>(null);
+  const [ccEnabled, setCcEnabled] = useState(true);
 
   const scheduleHide = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -207,6 +220,38 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
       stop();
     };
   }, []);
+
+  // ── subtitles: sync <track> mode ─────────────────────────────────────
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const tracks = v.textTracks;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      // @ts-ignore label match
+      const shouldShow = ccEnabled && selectedSub !== null && t.label === selectedSub;
+      t.mode = shouldShow ? "showing" : "hidden";
+    }
+    if (selectedSub === null) {
+      for (let i = 0; i < tracks.length; i++) tracks[i].mode = "hidden";
+    }
+  }, [selectedSub, ccEnabled, subtitles, src]);
+
+  useEffect(() => {
+    if (subtitles.length && selectedSub === null && ccEnabled) {
+      const def = subtitles.find((s) => s.default) || subtitles[0];
+      if (def) setSelectedSub(def.label);
+    }
+  }, [subtitles]);
+
+  const handleSelectSub = useCallback(
+    (label: string | null) => {
+      setSelectedSub(label);
+      const track = label ? subtitles.find((s) => s.label === label) || null : null;
+      onSubtitleChange?.(track);
+    },
+    [subtitles, onSubtitleChange],
+  );
 
   // ── media events ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -416,9 +461,14 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
         autoPlay={autoPlay}
         playsInline
         preload="auto"
+        crossOrigin="anonymous"
         className={cn("h-full w-full bg-black object-contain", !showControls && "cursor-none")}
         onClick={togglePlay}
-      />
+      >
+        {subtitles.map((t) => (
+          <track key={t.src} kind="subtitles" src={t.src} srcLang={t.lang} label={t.label} default={t.default} />
+        ))}
+      </video>
 
       {/* top gradient + title bar */}
       <div
@@ -590,6 +640,17 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
 
           <div className="flex-1" />
 
+          {/* CC */}
+          <button
+            type="button"
+            onClick={() => setCcEnabled((v) => !v)}
+            className={cn("flex h-9 w-9 items-center justify-center text-white transition hover:scale-110", ccEnabled && subtitles.length && "text-[#E50914]")}
+            aria-label="Subtitles"
+            title={ccEnabled ? "CC On" : "CC Off"}
+          >
+            <span className="text-[11px] font-bold tracking-widest border border-current rounded px-1 py-0.5">CC</span>
+          </button>
+
           {/* settings */}
           <div className="relative">
             <button
@@ -607,14 +668,14 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
               <GearIcon className="h-6 w-6" />
             </button>
             {settingsOpen && (
-              <div className="absolute bottom-12 right-0 w-52 rounded-md border border-white/10 bg-black/90 p-2 shadow-xl backdrop-blur">
+              <div className="absolute bottom-12 right-0 w-52 rounded-md border border-white/10 bg-black/90 p-2 shadow-xl backdrop-blur max-h-72 overflow-auto">
                 <p className="px-2 pb-1 text-xs font-semibold text-white/60">Playback Speed</p>
                 {SPEEDS.map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => {
-                      setSpeed(s);
+                      changeSpeed(s);
                       setSettingsOpen(false);
                     }}
                     className={cn(
@@ -640,6 +701,80 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                     </button>
                   </>
                 )}
+                {subtitles.length > 0 && (
+                  <>
+                    <div className="my-1 h-px bg-white/10" />
+                    <p className="px-2 pb-1 text-xs font-semibold text-white/60">Subtitles</p>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSub(null)}
+                      className={cn("flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10", selectedSub === null && "text-[#E50914]")}
+                    >
+                      <span>Off</span>
+                      {selectedSub === null && <CheckIcon className="h-4 w-4" />}
+                    </button>
+                    {subtitles.map((t) => (
+                      <button
+                        key={t.label}
+                        type="button"
+                        onClick={() => handleSelectSub(t.label)}
+                        className={cn("flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10", selectedSub === t.label && "text-[#E50914]")}
+                      >
+                        <span>{t.label}</span>
+                        {selectedSub === t.label && <CheckIcon className="h-4 w-4" />}
+                      </button>
+                    ))}
+                  </>
+                )}
+                <div className="my-1 h-px bg-white/10" />
+                <label className="flex w-full cursor-pointer items-center justify-between rounded px-2 py-1.5 text-sm text-white hover:bg-white/10">
+                  <span>Upload .vtt/.srt</span>
+                  <input
+                    type="file"
+                    accept=".vtt,.srt"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const url = URL.createObjectURL(f);
+                      const label = f.name.replace(/\.[^.]+$/, "");
+                      // srt -> vtt conversion: add WEBVTT header if missing
+                      if (f.name.endsWith(".srt")) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          let txt = String(reader.result || "");
+                          if (!txt.startsWith("WEBVTT")) txt = "WEBVTT\n\n" + txt.replace(/(\d+)\n(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1\n$2.$3");
+                          const blob = new Blob([txt], { type: "text/vtt" });
+                          const vttUrl = URL.createObjectURL(blob);
+                          const v = videoRef.current;
+                          if (v) {
+                            const track = document.createElement("track");
+                            track.kind = "subtitles";
+                            track.label = label;
+                            track.srclang = "en";
+                            track.src = vttUrl;
+                            track.default = true;
+                            v.appendChild(track);
+                            setSelectedSub(label);
+                          }
+                        };
+                        reader.readAsText(f);
+                      } else {
+                        const v = videoRef.current;
+                        if (v) {
+                          const track = document.createElement("track");
+                          track.kind = "subtitles";
+                          track.label = label;
+                          track.srclang = "en";
+                          track.src = url;
+                          track.default = true;
+                          v.appendChild(track);
+                          setSelectedSub(label);
+                        }
+                      }
+                    }}
+                  />
+                </label>
               </div>
             )}
           </div>
