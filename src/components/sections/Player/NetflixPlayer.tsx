@@ -580,48 +580,48 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
         </div>
 
         {/* controls row */}
-        <div className="flex items-center gap-3 px-4 pb-4 sm:gap-4">
-          <button
-            type="button"
-            onClick={togglePlay}
-            className="flex h-9 w-9 items-center justify-center text-white transition hover:scale-110"
-            aria-label={playing ? "Pause" : "Play"}
-          >
-            {playing ? (
-              <PauseIcon className="h-8 w-8" />
-            ) : (
-              <PlayIcon className="h-8 w-8" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => skip(-10)}
-            className="flex h-9 w-9 items-center justify-center text-white transition hover:scale-110"
-            aria-label="Back 10 seconds"
-          >
-            <Replay10Icon className="h-7 w-7" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => skip(10)}
-            className="flex h-9 w-9 items-center justify-center text-white transition hover:scale-110"
-            aria-label="Forward 10 seconds"
-          >
-            <Forward10Icon className="h-7 w-7" />
-          </button>
-
-          {/* volume */}
-          <div className="group/vol flex items-center">
+        <div className="flex items-center gap-2 px-3 pb-3 sm:gap-3">
             <button
               type="button"
-              onClick={toggleMute}
-              className="flex h-9 w-9 items-center justify-center text-white transition hover:scale-110"
-              aria-label={muted ? "Unmute" : "Mute"}
+              onClick={togglePlay}
+              className="flex h-7 w-7 items-center justify-center text-white transition hover:scale-110"
+              aria-label={playing ? "Pause" : "Play"}
             >
-              <VolumeIcon className="h-7 w-7" muted={muted} />
+              {playing ? (
+                <PauseIcon className="h-6 w-6" />
+              ) : (
+                <PlayIcon className="h-6 w-6" />
+              )}
             </button>
+
+            <button
+              type="button"
+              onClick={() => skip(-10)}
+              className="flex h-7 w-7 items-center justify-center text-white transition hover:scale-110"
+              aria-label="Back 10 seconds"
+            >
+              <Replay10Icon className="h-5 w-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => skip(10)}
+              className="flex h-7 w-7 items-center justify-center text-white transition hover:scale-110"
+              aria-label="Forward 10 seconds"
+            >
+              <Forward10Icon className="h-5 w-5" />
+            </button>
+
+            {/* volume */}
+            <div className="group/vol hidden sm:flex items-center">
+              <button
+                type="button"
+                onClick={toggleMute}
+                className="flex h-7 w-7 items-center justify-center text-white transition hover:scale-110"
+                aria-label={muted ? "Unmute" : "Mute"}
+              >
+                <VolumeIcon className="h-5 w-5" muted={muted} />
+              </button>
             <input
               type="range"
               min={0}
@@ -634,21 +634,21 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
             />
           </div>
 
-          <span className="text-sm font-medium text-white/90 sm:text-base">
-            {formatTime(currentTime)} <span className="text-white/50">/ {formatTime(duration)}</span>
+          <span className="text-xs font-medium text-white/90 tabular-nums">
+            {formatTime(currentTime)} <span className="hidden sm:inline text-white/50">/ {formatTime(duration)}</span>
           </span>
 
-          <div className="flex-1" />
+          <div className="flex-1 min-w-2" />
 
           {/* CC */}
           <button
             type="button"
             onClick={() => setCcEnabled((v) => !v)}
-            className={cn("flex h-9 w-9 items-center justify-center text-white transition hover:scale-110", ccEnabled && subtitles.length && "text-[#E50914]")}
+            className={cn("flex h-7 w-7 items-center justify-center text-white transition hover:scale-110", ccEnabled && subtitles.length && "text-[#E50914]")}
             aria-label="Subtitles"
             title={ccEnabled ? "CC On" : "CC Off"}
           >
-            <span className="text-[11px] font-bold tracking-widest border border-current rounded px-1 py-0.5">CC</span>
+            <span className="text-[10px] font-bold tracking-widest border border-current rounded px-1 py-0.5 leading-none">CC</span>
           </button>
 
           {/* settings */}
@@ -660,15 +660,15 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                 show();
               }}
               className={cn(
-                "flex h-9 w-9 items-center justify-center text-white transition hover:scale-110",
+                "flex h-7 w-7 items-center justify-center text-white transition hover:scale-110",
                 settingsOpen && "text-[#E50914]",
               )}
               aria-label="Settings"
             >
-              <GearIcon className="h-6 w-6" />
+              <GearIcon className="h-5 w-5" />
             </button>
             {settingsOpen && (
-              <div className="absolute bottom-12 right-0 w-52 rounded-md border border-white/10 bg-black/90 p-2 shadow-xl backdrop-blur max-h-72 overflow-auto">
+              <div className="absolute bottom-12 right-0 w-48 rounded-md border border-white/10 bg-black/90 p-2 shadow-xl backdrop-blur max-h-64 overflow-auto">
                 <p className="px-2 pb-1 text-xs font-semibold text-white/60">Playback Speed</p>
                 {SPEEDS.map((s) => (
                   <button
@@ -794,13 +794,13 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="flex h-9 w-9 items-center justify-center text-white transition hover:scale-110"
+            className="flex h-7 w-7 items-center justify-center text-white transition hover:scale-110"
             aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {fullscreen ? (
-              <ExitFullscreenIcon className="h-6 w-6" />
+              <ExitFullscreenIcon className="h-5 w-5" />
             ) : (
-              <FullscreenIcon className="h-6 w-6" />
+              <FullscreenIcon className="h-5 w-5" />
             )}
           </button>
         </div>
