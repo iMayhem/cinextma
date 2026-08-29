@@ -2,7 +2,7 @@ export async function onRequest(context: any) {
   const request: Request = context.request;
   const url = new URL(request.url);
   // Forward all query params to VPS
-  const targetUrl = `http://31.56.53.215/api/scrape${url.search}`;
+  const targetUrl = `http://31.56.53.215.nip.io/api/scrape${url.search}`;
   const res = await fetch(targetUrl, {
     method: request.method,
     headers: {

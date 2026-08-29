@@ -1,7 +1,7 @@
 export async function onRequest(context: any) {
   const request: Request = context.request;
   const body = await request.text();
-  const res = await fetch(`http://31.56.53.215/api/token`, {
+  const res = await fetch(`http://31.56.53.215.nip.io/api/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
