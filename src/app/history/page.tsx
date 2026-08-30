@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button, Card, CardBody, Image, Spinner, Chip } from "@heroui/react";
 import Link from "next/link";
 import { FiClock, FiTrash2, FiPlay, FiLogIn } from "react-icons/fi";
-import { tmdbImage } from "@/utils/helpers";
+import { getImageUrl } from "@/utils/movies";
 
 interface HistoryItem {
   id: number;
@@ -150,17 +150,17 @@ export default function HistoryPage() {
           {history.map((item) => {
             const playUrl =
               item.media_type === "tv" && item.season && item.episode
-                ? `/tv/player?id=${item.tmdb_id}&season=${item.season}&episode=${item.episode}`
-                : `/movie/player?id=${item.tmdb_id}`;
+                ? `/tv/${item.tmdb_id}/${item.season}/${item.episode}/player`
+                : `/movie/${item.tmdb_id}/player`;
 
             const detailUrl =
               item.media_type === "tv" ? `/tv/${item.tmdb_id}` : `/movie/${item.tmdb_id}`;
 
             const imageSrc = item.poster_path
-              ? tmdbImage.poster(item.poster_path, "w342")
+              ? getImageUrl(item.poster_path, "poster")
               : item.backdrop_path
-                ? tmdbImage.backdrop(item.backdrop_path, "w780")
-                : "/no-poster.png";
+                ? getImageUrl(item.backdrop_path, "backdrop")
+                : "https://dancyflix.com/placeholder.png";
 
             return (
               <Card

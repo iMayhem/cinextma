@@ -13,13 +13,12 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Avatar,
 } from "@heroui/react";
 import { useWindowScroll } from "@mantine/hooks";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { FiLogIn, FiUser, FiClock, FiLogOut } from "react-icons/fi";
+import { FiLogIn, FiClock, FiLogOut } from "react-icons/fi";
 import FullscreenToggleButton from "../button/FullscreenToggleButton";
 import SearchInput from "../input/SearchInput";
 import ThemeSwitchDropdown from "../input/ThemeSwitchDropdown";
@@ -78,13 +77,13 @@ const TopNavbar = () => {
           {user ? (
             <Dropdown placement="bottom-end">
               <DropdownTrigger>
-                <button className="flex items-center gap-1.5 rounded-full bg-zinc-800/60 hover:bg-zinc-800 p-1 pr-2.5 transition-colors border border-zinc-700/50">
-                  <Avatar
-                    size="sm"
-                    name={user.username}
-                    className="h-6 w-6 text-xs bg-primary text-white font-semibold"
-                  />
-                  <span className="text-xs font-medium max-w-[80px] truncate">{user.username}</span>
+                <button className="flex items-center gap-2 rounded-full bg-zinc-900 hover:bg-zinc-800 py-1 px-2 transition-colors border border-zinc-800">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 border border-zinc-700 text-[11px] font-semibold text-zinc-200 uppercase select-none">
+                    {user.username.charAt(0)}
+                  </div>
+                  <span className="text-xs font-medium max-w-[90px] truncate text-zinc-300">
+                    {user.username}
+                  </span>
                 </button>
               </DropdownTrigger>
               <DropdownMenu aria-label="User actions" variant="flat">
