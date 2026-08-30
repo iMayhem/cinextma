@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "cinextma"
+project_id = "streamaggregator"
 
 [api]
 enabled = true
@@ -188,7 +188,7 @@ port = "env(SUPABASE_AUTH_SMTP_PORT)"
 user = "env(SUPABASE_AUTH_SMTP_EMAIL)"
 pass = "env(SUPABASE_AUTH_SMTP_PASSWORD)"
 admin_email = "env(SUPABASE_AUTH_SMTP_EMAIL)"
-sender_name = "Cinextma"
+sender_name = "StreamAggregator"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

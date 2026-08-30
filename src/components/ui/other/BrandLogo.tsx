@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Saira } from "@/utils/fonts";
 import { cn } from "@/utils/helpers";
-import { Next } from "@/utils/icons";
 import useDiscoverFilters from "@/hooks/useDiscoverFilters";
 
 export interface BrandLogoProps {
@@ -28,16 +27,15 @@ const BrandLogo: React.FC<BrandLogoProps> = ({ animate = false, className }) => 
           className,
         )}
       >
-        CINE{" "}
-        <span>
-          <Next
-            className={cn("size-full px-[2px] transition-colors", {
-              "text-primary": content === "movie",
-              "text-warning": content === "tv",
-            })}
-          />
-        </span>{" "}
-        TMA
+        STREAM
+        <span
+          className={cn("transition-colors", {
+            "text-primary": content === "movie",
+            "text-warning": content === "tv",
+          })}
+        >
+          AGGREGATOR
+        </span>
       </span>
     </Link>
   );

@@ -21,9 +21,11 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
       )}
     >
       <h6>{siteConfig.description}</h6>
-      <Link isExternal href={siteConfig.socials.github} color="foreground">
-        <FaGithub size={24} />
-      </Link>
+      {siteConfig.socials.github && (
+        <Link isExternal href={siteConfig.socials.github} color="foreground">
+          <FaGithub size={24} />
+        </Link>
+      )}
       <Breadcrumbs
         separator="•"
         itemClasses={{
@@ -36,7 +38,7 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
           </BreadcrumbItem>
         ))}
       </Breadcrumbs>
-      <p>© 2024 Wisnu Wirayuda</p>
+      <p>© {new Date().getFullYear()} StreamAggregator</p>
     </footer>
   );
 };
