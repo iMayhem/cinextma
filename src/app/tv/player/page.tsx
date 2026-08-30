@@ -4,7 +4,7 @@ import { tmdb } from "@/api/tmdb";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { notFound, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import dynamic from "next/dynamic";
 const TvShowPlayer = dynamic(() => import("@/components/sections/TV/Player/Player"));
 
@@ -33,6 +33,29 @@ function TvShowPlayerInner() {
     queryKey: ["tv-show-season", id, season],
     enabled: !!id && !!season,
   });
+
+  const EPISODE = seasonDetail?.episodes?.find(
+    (e: any) => e.episode_number.toString() === episode.toString(),
+  );
+
+  useEffect(() => {
+    if (tv && EPISODE && id && season && episode) {
+      fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          media_type: "tv",
+          tmdb_id: id,
+          title: tv.name,
+          poster_path: tv.poster_path,
+          backdrop_path: tv.backdrop_path,
+          season: season,
+          episode: episode,
+          episode_title: EPISODE.name,
+        }),
+      }).catch(() => {});
+    }
+  }, [tv, EPISODE, id, season, episode]);
 
   if (!id || !season || !episode) notFound();
 

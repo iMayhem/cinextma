@@ -6,7 +6,7 @@ import { isEmpty } from "@/utils/helpers";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { notFound, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 function MoviePlayerInner() {
   const searchParams = useSearchParams();
@@ -21,6 +21,22 @@ function MoviePlayerInner() {
     queryKey: ["movie-player-detail", id],
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (movie && movie.id) {
+      fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          media_type: "movie",
+          tmdb_id: movie.id,
+          title: movie.title,
+          poster_path: movie.poster_path,
+          backdrop_path: movie.backdrop_path,
+        }),
+      }).catch(() => {});
+    }
+  }, [movie]);
 
   if (!id) notFound();
 

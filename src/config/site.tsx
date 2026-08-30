@@ -10,6 +10,8 @@ import {
   IoInformationCircle,
   IoInformationCircleOutline,
   IoMoon,
+  IoTime,
+  IoTimeOutline,
 } from "react-icons/io5";
 
 export const siteConfig: SiteConfigType = {
@@ -34,6 +36,12 @@ export const siteConfig: SiteConfigType = {
       href: "/search",
       icon: <BiSearchAlt2 className="size-full" />,
       activeIcon: <BiSolidSearchAlt2 className="size-full" />,
+    },
+    {
+      label: "History",
+      href: "/history",
+      icon: <IoTimeOutline className="size-full" />,
+      activeIcon: <IoTime className="size-full" />,
     },
     {
       label: "About",

@@ -10,6 +10,9 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { usePathname, useRouter } from "next/navigation";
 import useDiscoverFilters from "@/hooks/useDiscoverFilters";
 
+import { AuthProvider } from "@/context/AuthContext";
+import { AuthModal } from "@/components/ui/overlay/AuthModal";
+
 export const queryClient = new QueryClient();
 
 export default function Providers({ children }: PropsWithChildren) {
@@ -20,33 +23,36 @@ export default function Providers({ children }: PropsWithChildren) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <HeroUIProvider navigate={push}>
-        <ToastProvider
-          placement="top-right"
-          maxVisibleToasts={1}
-          toastOffset={10}
-          toastProps={{
-            shouldShowTimeoutProgress: true,
-            timeout: 5000,
-            classNames: {
-              content: "mr-7",
-              closeButton:
-                "opacity-100 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto",
-            },
-          }}
-        />
-        <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem>
-          {/* https://github.com/vercel/next.js/discussions/61654#discussioncomment-8480088 */}
-          <Suspense>
-            <ProgressProvider
-              options={{ showSpinner: false }}
-              color={`hsl(var(--heroui-${tv ? "warning" : "primary"}))`}
-            >
-              {children}
-            </ProgressProvider>
-          </Suspense>
-        </NextThemesProvider>
-      </HeroUIProvider>
+      <AuthProvider>
+        <HeroUIProvider navigate={push}>
+          <ToastProvider
+            placement="top-right"
+            maxVisibleToasts={1}
+            toastOffset={10}
+            toastProps={{
+              shouldShowTimeoutProgress: true,
+              timeout: 5000,
+              classNames: {
+                content: "mr-7",
+                closeButton:
+                  "opacity-100 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto",
+              },
+            }}
+          />
+          <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem>
+            {/* https://github.com/vercel/next.js/discussions/61654#discussioncomment-8480088 */}
+            <Suspense>
+              <ProgressProvider
+                options={{ showSpinner: false }}
+                color={`hsl(var(--heroui-${tv ? "warning" : "primary"}))`}
+              >
+                {children}
+                <AuthModal />
+              </ProgressProvider>
+            </Suspense>
+          </NextThemesProvider>
+        </HeroUIProvider>
+      </AuthProvider>
       <div className="hidden md:block">
         <ReactQueryDevtools initialIsOpen={false} />
       </div>

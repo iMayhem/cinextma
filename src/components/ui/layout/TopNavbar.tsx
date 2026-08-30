@@ -3,16 +3,30 @@
 import BackButton from "@/components/ui/button/BackButton";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/utils/helpers";
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem } from "@heroui/react";
+import {
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+  Button,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Avatar,
+} from "@heroui/react";
 import { useWindowScroll } from "@mantine/hooks";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { FiLogIn, FiUser, FiClock, FiLogOut } from "react-icons/fi";
 import FullscreenToggleButton from "../button/FullscreenToggleButton";
 import SearchInput from "../input/SearchInput";
 import ThemeSwitchDropdown from "../input/ThemeSwitchDropdown";
 import BrandLogo from "../other/BrandLogo";
 
 const TopNavbar = () => {
+  const { user, openAuthModal, logout } = useAuth();
   const pathName = usePathname();
   const [{ y }] = useWindowScroll();
   const opacity = Math.min((y / 1000) * 5, 1);
@@ -57,9 +71,58 @@ const TopNavbar = () => {
         </NavbarContent>
       )}
       <NavbarContent justify="end">
-        <NavbarItem className="flex gap-1">
+        <NavbarItem className="flex items-center gap-1.5">
           <ThemeSwitchDropdown />
           <FullscreenToggleButton />
+
+          {user ? (
+            <Dropdown placement="bottom-end">
+              <DropdownTrigger>
+                <button className="flex items-center gap-1.5 rounded-full bg-zinc-800/60 hover:bg-zinc-800 p-1 pr-2.5 transition-colors border border-zinc-700/50">
+                  <Avatar
+                    size="sm"
+                    name={user.username}
+                    className="h-6 w-6 text-xs bg-primary text-white font-semibold"
+                  />
+                  <span className="text-xs font-medium max-w-[80px] truncate">{user.username}</span>
+                </button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="User actions" variant="flat">
+                <DropdownItem key="profile" className="h-14 gap-2" textValue="Signed in as">
+                  <p className="text-xs text-zinc-400">Signed in as</p>
+                  <p className="text-sm font-semibold truncate">{user.username}</p>
+                </DropdownItem>
+                <DropdownItem
+                  key="history"
+                  as={Link}
+                  href="/history"
+                  startContent={<FiClock className="text-primary" />}
+                >
+                  Watch History
+                </DropdownItem>
+                <DropdownItem
+                  key="logout"
+                  color="danger"
+                  className="text-danger"
+                  startContent={<FiLogOut />}
+                  onPress={() => logout()}
+                >
+                  Sign Out
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          ) : (
+            <Button
+              size="sm"
+              color="primary"
+              variant="flat"
+              startContent={<FiLogIn />}
+              onPress={() => openAuthModal("login")}
+              className="font-medium text-xs h-8"
+            >
+              Login
+            </Button>
+          )}
         </NavbarItem>
       </NavbarContent>
     </Navbar>
