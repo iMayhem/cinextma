@@ -17,7 +17,7 @@ import {
 export const siteConfig: SiteConfigType = {
   name: "StreamAggregator",
   description: "Your only choice for a free movies and tv shows streaming website.",
-  favicon: "/favicon.ico",
+  favicon: "/favicon.svg",
   navItems: [
     {
       label: "Home",

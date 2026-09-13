@@ -28,7 +28,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
   const title = mutateMovieTitle(movie);
   const year = movie.release_date?.slice(0, 4);
   const { links, status, error, abort } = useScrapeLinks({ title, year, type: "movie" });
-  const { tracks: subtitles } = useSubtitles({ title, year, tmdbId: movie.id, enabled: !!title });
+  const { tracks: subtitles } = useSubtitles({ title, year, tmdbId: movie.id, type: "movie", enabled: !!title });
 
   const idle = useIdle(3000);
   const { mobile } = useBreakpoints();

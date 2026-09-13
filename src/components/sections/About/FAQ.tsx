@@ -1,52 +1,38 @@
 "use client";
 
 import useBreakpoints from "@/hooks/useBreakpoints";
-import { Accordion, AccordionItem, Link } from "@heroui/react";
+import { Accordion, AccordionItem } from "@heroui/react";
 
 const FAQS = [
   {
-    title: "🤔 What is StreamAggregator?",
+    title: "⚡ How does StreamAggregator find streams?",
     description:
-      "Just like every other website, StreamAggregator is also a streaming site that helps to easily access all the TV shows and movies we wanted, without spending hours searching for them.",
+      "StreamAggregator connects with multiple high-speed media providers across the web in real-time. When you open a title, our system queries all available sources, sorts them by stream quality and latency, and automatically selects the fastest, most reliable source for instant playback.",
   },
   {
-    title: "❓ So what do we actually do?",
+    title: "🎬 What is the difference between Direct and Proxied sources?",
     description:
-      "Well, let me tell you what we don’t do: we definitely don’t illegally host our files. We do not store any copyright-protected content on our website. Any linked content is stored only in third-party websites. This is a promotional website only. All files placed here are for introducing purpose. We highly ENCOURAGE users to BUY the CDs or DVDs of the movie or the music they like.",
+      "Direct sources (marked with a green badge ⚡) stream directly from ultra-fast content delivery networks (CDNs) to your browser for minimal latency. Proxied sources route through our backend proxy engine to seamlessly handle custom headers and CORS restrictions, ensuring maximum link availability.",
   },
   {
-    title: "🚫 I cannot watch video because of ads",
-    description: (
-      <p>
-        We are very sorry that we can't help you with that. We have no control in the ads being
-        served. Don't download anything in the popups. If you don't want to be annoyed. We highly
-        recommend subscribing to a legal streaming service that you can afford (or use an adblocker
-        like{" "}
-        <Link href="https://ublockorigin.com/" target="_blank" className="font-bold">
-          uBlock Origin
-        </Link>{" "}
-        or{" "}
-        <Link href="https://adblockplus.org/" target="_blank" className="font-bold">
-          Adblock Plus
-        </Link>
-        ).
-      </p>
-    ),
+    title: "⏱️ How does Watch History work?",
+    description:
+      "When you create a free account and log in, your watch progress is automatically synchronized. You can resume movies, keep track of TV show seasons & episodes, and manage your viewing history from the History page anytime.",
   },
   {
-    title: "🐌 Streaming speed is slow or all videos do not play",
+    title: "💬 Are subtitles supported?",
     description:
-      "When you go on the page with the episode, in 99% of the cases there is a video player. What you have to do is click the Play button, of course. If it does not work (Don’t be judgmental! Everybody makes mistakes!), just click on the Servers you see on the top right of your device. You will get a list of servers [Vidlink, VidSrc etc.] Try choosing different server, it will definitely solve the problem.",
+      "Yes! Our video player includes automated multi-language subtitle integration. Click the subtitle (CC) button on the player controls to select your preferred language or load custom caption tracks.",
   },
   {
-    title: "😁 I want to download video",
+    title: "🔄 What should I do if a source buffers or fails to play?",
     description:
-      "Since we don't store any files, so we don't have any download feature here. All files found on this site have been collected from various sources across the web and are believed to be in the public domain.",
+      "Simply open the 'Sources' panel on the right side of the video player (or top menu on mobile) and select another provider from the list. We provide multiple fallback streams in various resolutions (4K, 1080p, 720p) so you always have a working stream.",
   },
   {
-    title: "😟 Is it safe to stream in this website?",
+    title: "🛡️ Is my account and data safe?",
     description:
-      "This website is undoubtedly safer to stream, however downloading, uploading is illegal. You will not get into any trouble while using our website. It's highly not recommended to download the files and share them to the public, It might get you in trouble.",
+      "StreamAggregator uses secure session authentication with industry-standard bcrypt password hashing. We do not track personal telemetry or sell user information.",
   },
 ];
 
@@ -54,10 +40,17 @@ const FAQ = () => {
   const { mobile } = useBreakpoints();
 
   return (
-    <Accordion variant="splitted" isCompact={mobile}>
+    <Accordion variant="splitted" isCompact={mobile} className="px-0">
       {FAQS.map(({ title, description }) => (
-        <AccordionItem key={title} aria-label={title} title={title}>
-          {description}
+        <AccordionItem
+          key={title}
+          aria-label={title}
+          title={<span className="text-sm font-semibold">{title}</span>}
+          className="bg-default-50 border border-default-200/60 shadow-none hover:border-primary/40 transition"
+        >
+          <p className="text-xs sm:text-sm text-foreground-600 leading-relaxed pb-2">
+            {description}
+          </p>
         </AccordionItem>
       ))}
     </Accordion>

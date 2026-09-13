@@ -67,9 +67,15 @@ export function useScrapeLinks(req: ScrapeRequest): ScrapeState {
             try {
               const evt = JSON.parse(line);
               if (evt && evt.url) {
-                setLinks((prev) =>
-                  prev.some((l) => l.url === evt.url) ? prev : [...prev, evt],
-                );
+                // Skip magnet links and .torrent files — browser can't play these
+                const isTorrent =
+                  evt.url.startsWith("magnet:") ||
+                  evt.url.toLowerCase().includes(".torrent");
+                if (!isTorrent) {
+                  setLinks((prev) =>
+                    prev.some((l) => l.url === evt.url) ? prev : [...prev, evt],
+                  );
+                }
               }
             } catch {
               // ignore malformed lines

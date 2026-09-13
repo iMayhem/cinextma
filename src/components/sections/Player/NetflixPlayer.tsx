@@ -137,6 +137,10 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
   const [seekHover, setSeekHover] = useState(false);
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
   const [ccEnabled, setCcEnabled] = useState(true);
+  const [subOffset, setSubOffset] = useState(0); // subtitle sync offset in seconds
+  const [subOffsetToast, setSubOffsetToast] = useState<string | null>(null);
+  const currentOffsetRef = useRef(0);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleHide = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -168,16 +172,39 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
 
     if (src.includes(".m3u8") && Hls.isSupported()) {
       hlsRef.current?.destroy();
-      const hls = new Hls({ enableWorker: true });
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 60,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        fragLoadingTimeOut: 20000,
+        manifestLoadingTimeOut: 15000,
+      });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
       hls.on(Hls.Events.ERROR, (_evt, data) => {
         if (data.fatal) {
-          setError("Playback error — try another source");
-          setWaiting(false);
-          onErrorRef.current?.();
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.warn("HLS network error, recovering...");
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.warn("HLS media error, recovering...");
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              setError("Playback error — try another source");
+              setWaiting(false);
+              onErrorRef.current?.();
+              break;
+          }
         }
       });
     } else {
@@ -253,7 +280,46 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
     [subtitles, onSubtitleChange],
   );
 
-  // ── media events ─────────────────────────────────────────────────────
+  // ── subtitle offset helpers ────────────────────────────────────────────
+  const showOffsetToast = useCallback((offset: number) => {
+    const sign = offset >= 0 ? "+" : "";
+    setSubOffsetToast(`Subtitle Delay: ${sign}${offset.toFixed(1)}s`);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setSubOffsetToast(null), 2000);
+  }, []);
+
+  const adjustSubtitleTiming = useCallback(
+    (delta: number) => {
+      const v = videoRef.current;
+      if (!v) return;
+      const tracks = v.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (track.mode === "showing") {
+          const cues = track.cues;
+          if (cues) {
+            for (let j = 0; j < cues.length; j++) {
+              const cue = cues[j] as VTTCue;
+              cue.startTime += delta;
+              cue.endTime += delta;
+            }
+          }
+        }
+      }
+      const newOffset = parseFloat((currentOffsetRef.current + delta).toFixed(1));
+      currentOffsetRef.current = newOffset;
+      setSubOffset(newOffset);
+      showOffsetToast(newOffset);
+    },
+    [showOffsetToast],
+  );
+
+  const resetSubtitleTiming = useCallback(() => {
+    const delta = -currentOffsetRef.current;
+    adjustSubtitleTiming(delta);
+  }, [adjustSubtitleTiming]);
+
+
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -407,10 +473,20 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
           e.preventDefault();
           changeVolume((videoRef.current?.volume ?? 1) - 0.1);
           break;
+        case "z":
+          adjustSubtitleTiming(-0.1);
+          break;
+        case "x":
+          adjustSubtitleTiming(0.1);
+          break;
+        case "c":
+          resetSubtitleTiming();
+          break;
       }
     },
-    [togglePlay, skip, toggleFullscreen, toggleMute, changeVolume],
+    [togglePlay, skip, toggleFullscreen, toggleMute, changeVolume, adjustSubtitleTiming, resetSubtitleTiming],
   );
+
 
   const onBarMove = useCallback(
     (e: React.MouseEvent) => {
@@ -512,7 +588,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
       {/* buffering spinner */}
       {waiting && playing && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-[#E50914]" />
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-primary" />
         </div>
       )}
 
@@ -523,14 +599,22 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
           <button
             type="button"
             onClick={() => setError(null)}
-            className="rounded bg-[#E50914] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#f6121d]"
+            className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/80"
           >
             Retry
           </button>
         </div>
       )}
 
+      {/* subtitle offset toast */}
+      {subOffsetToast && (
+        <div className="pointer-events-none absolute left-1/2 top-16 z-30 -translate-x-1/2 rounded-full bg-black/80 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition-opacity">
+          {subOffsetToast}
+        </div>
+      )}
+
       {/* bottom controls */}
+
       <div
         className={cn(
           "absolute inset-x-0 bottom-0 z-20 pt-10 transition-opacity duration-300",
@@ -561,7 +645,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
               />
             ))}
             <div
-              className="absolute left-0 top-0 h-full rounded-full bg-[#E50914]"
+              className="absolute left-0 top-0 h-full rounded-full bg-primary"
               style={{ width: `${progressPct}%` }}
             />
             {seekHover && hoverTime !== null && (
@@ -644,7 +728,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
           <button
             type="button"
             onClick={() => setCcEnabled((v) => !v)}
-            className={cn("flex h-7 w-7 items-center justify-center text-white transition hover:scale-110", ccEnabled && subtitles.length && "text-[#E50914]")}
+            className={cn("flex h-7 w-7 items-center justify-center text-white transition hover:scale-110", ccEnabled && subtitles.length && "text-primary")}
             aria-label="Subtitles"
             title={ccEnabled ? "CC On" : "CC Off"}
           >
@@ -661,7 +745,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
               }}
               className={cn(
                 "flex h-7 w-7 items-center justify-center text-white transition hover:scale-110",
-                settingsOpen && "text-[#E50914]",
+                settingsOpen && "text-primary",
               )}
               aria-label="Settings"
             >
@@ -680,7 +764,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                     }}
                     className={cn(
                       "flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10",
-                      speed === s && "text-[#E50914]",
+                      speed === s && "text-primary font-medium",
                     )}
                   >
                     <span>{s === 1 ? "Normal" : `${s}x`}</span>
@@ -697,7 +781,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                       className="flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10"
                     >
                       <span>{quality}</span>
-                      <CheckIcon className="h-4 w-4 text-[#E50914]" />
+                      <CheckIcon className="h-4 w-4 text-primary" />
                     </button>
                   </>
                 )}
@@ -708,7 +792,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleSelectSub(null)}
-                      className={cn("flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10", selectedSub === null && "text-[#E50914]")}
+                      className={cn("flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10", selectedSub === null && "text-primary font-medium")}
                     >
                       <span>Off</span>
                       {selectedSub === null && <CheckIcon className="h-4 w-4" />}
@@ -718,7 +802,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                         key={t.label}
                         type="button"
                         onClick={() => handleSelectSub(t.label)}
-                        className={cn("flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10", selectedSub === t.label && "text-[#E50914]")}
+                        className={cn("flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-white transition hover:bg-white/10", selectedSub === t.label && "text-primary font-medium")}
                       >
                         <span>{t.label}</span>
                         {selectedSub === t.label && <CheckIcon className="h-4 w-4" />}
@@ -726,9 +810,53 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
                     ))}
                   </>
                 )}
+                {/* subtitle sync offset */}
+                {selectedSub !== null && (
+                  <>
+                    <div className="my-1 h-px bg-white/10" />
+                    <div className="flex items-center justify-between px-2 pb-0.5 pt-1">
+                      <p className="text-xs font-semibold text-white/60">Subtitle Sync</p>
+                      <div className="flex items-center gap-2">
+                        <span className="min-w-[3rem] text-right text-xs font-medium text-white/80">
+                          {subOffset >= 0 ? "+" : ""}{subOffset.toFixed(2)}s
+                        </span>
+                        <button
+                          type="button"
+                          onClick={resetSubtitleTiming}
+                          className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/60 hover:bg-white/20"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                    <div className="px-2 pb-2 pt-1">
+                      <input
+                        type="range"
+                        min={-5}
+                        max={5}
+                        step={0.25}
+                        value={subOffset}
+                        onChange={(e) => {
+                          const newVal = parseFloat(e.target.value);
+                          const delta = parseFloat((newVal - currentOffsetRef.current).toFixed(2));
+                          adjustSubtitleTiming(delta);
+                        }}
+                        className="w-full cursor-pointer accent-primary"
+                        aria-label="Subtitle sync offset"
+                      />
+                      <div className="flex justify-between text-[9px] text-white/30">
+                        <span>-5s</span>
+                        <span>0</span>
+                        <span>+5s</span>
+                      </div>
+                    </div>
+                    <p className="px-2 pb-1 text-[10px] text-white/30">z / x keys for ±0.1s • c to reset</p>
+                  </>
+                )}
                 <div className="my-1 h-px bg-white/10" />
                 <label className="flex w-full cursor-pointer items-center justify-between rounded px-2 py-1.5 text-sm text-white hover:bg-white/10">
                   <span>Upload .vtt/.srt</span>
+
                   <input
                     type="file"
                     accept=".vtt,.srt"
@@ -784,7 +912,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
             <button
               type="button"
               onClick={onNext}
-              className="flex items-center gap-1.5 rounded border border-white/40 px-3 py-1.5 text-sm font-medium text-white transition hover:border-[#E50914] hover:bg-[#E50914]"
+              className="flex items-center gap-1.5 rounded border border-white/40 px-3 py-1.5 text-sm font-medium text-white transition hover:border-primary hover:bg-primary"
             >
               Next Episode
               <PlayIcon className="h-3.5 w-3.5" />

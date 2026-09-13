@@ -114,7 +114,7 @@ export const getImageUrl = (
       : type === "backdrop"
         ? "https://wallpapercave.com/wp/wp1945939.jpg"
         : "";
-  return path ? `http://image.tmdb.org/t/p/${size}/${path}` : fallback;
+  return path ? `https://image.tmdb.org/t/p/${size}/${path.replace(/^\/+/, "")}` : fallback;
 };
 
 /**

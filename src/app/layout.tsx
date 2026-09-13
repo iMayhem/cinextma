@@ -12,7 +12,7 @@ import { IS_PRODUCTION, SpacingClasses } from "@/utils/constants";
 import dynamic from "next/dynamic";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Suspense } from "react";
-const Disclaimer = dynamic(() => import("@/components/ui/overlay/Disclaimer"));
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -20,7 +20,12 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   manifest: "/manifest.json",
   icons: {
-    icon: siteConfig.favicon,
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/favicon.svg",
+    shortcut: "/favicon.svg",
   },
   twitter: {
     card: "summary",
@@ -58,7 +63,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Suspense>
           <NuqsAdapter>
             <Providers>
-              {IS_PRODUCTION && <Disclaimer />}
               <TopNavbar />
               <Sidebar>
                 <main className={cn("container mx-auto max-w-full", SpacingClasses.main)}>
@@ -69,6 +73,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Providers>
           </NuqsAdapter>
         </Suspense>
+        <Script
+          defer
+          src="https://cloud.umami.is/script.js"
+          data-website-id="4d3ef7a2-810c-4e2e-b9ac-47ddd8d8c83e"
+          strategy="afterInteractive"
+        />
+        <Script
+          src="//d3dq75ilej3qlf.cloudfront.net/?liqdd=1617406"
+          strategy="afterInteractive"
+          data-cfasync="false"
+        />
       </body>
     </html>
   );

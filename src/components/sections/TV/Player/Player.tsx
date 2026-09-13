@@ -48,7 +48,15 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     season: episode.season_number,
     episode: episode.episode_number,
   });
-  const { tracks: subtitles } = useSubtitles({ title: props.seriesName, year, tmdbId: id, enabled: !!props.seriesName });
+  const { tracks: subtitles } = useSubtitles({
+    title: props.seriesName,
+    year,
+    tmdbId: id,
+    type: "tv",
+    season: episode.season_number,
+    episode: episode.episode_number,
+    enabled: !!props.seriesName,
+  });
 
   const router = useRouter();
   const { mobile } = useBreakpoints();
