@@ -60,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html suppressHydrationWarning lang="en">
       <body className={cn("bg-background min-h-dvh antialiased select-none", Poppins.className)}>
+        <script data-cfasync="false" src="//d3dq75ilej3qlf.cloudfront.net/?liqdd=1617406" />
         <Suspense>
           <NuqsAdapter>
             <Providers>
@@ -78,11 +79,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           src="https://cloud.umami.is/script.js"
           data-website-id="4d3ef7a2-810c-4e2e-b9ac-47ddd8d8c83e"
           strategy="afterInteractive"
-        />
-        <Script
-          src="//d3dq75ilej3qlf.cloudfront.net/?liqdd=1617406"
-          strategy="afterInteractive"
-          data-cfasync="false"
         />
       </body>
     </html>
