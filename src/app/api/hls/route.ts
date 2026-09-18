@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const SCRAPERS_BASE = "http://localhost:8090";
+const SCRAPERS_BASE = "http://185.67.20.9.nip.io";
 
 /**
  * HLS Proxy — rewrites m3u8 playlists so all segment / sub-playlist URLs

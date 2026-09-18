@@ -12,7 +12,7 @@ export interface ScrapedLink {
 }
 
 // On Cloudflare Pages, leave NEXT_PUBLIC_API_URL empty to use same-origin Pages Functions proxy (functions/api/* -> VPS)
-// For local dev / VPS direct, set NEXT_PUBLIC_API_URL=http://31.56.53.215
+// For local dev / VPS direct, set NEXT_PUBLIC_API_URL=http://185.67.20.9
 // Fallback to VPS IP via proxy if env missing on Pages
 export const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
 

@@ -2,7 +2,7 @@ export async function onRequest(context: any) {
   const url = new URL(context.request.url);
   const qs = url.search;
   // proxy to VPS subs endpoint via nip.io to avoid 1003
-  const target = `http://31.56.53.215.nip.io/api/subs${qs}`;
+  const target = `http://185.67.20.9.nip.io/api/subs${qs}`;
   try {
     const res = await fetch(target);
     const body = await res.text();
