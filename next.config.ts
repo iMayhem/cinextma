@@ -1,7 +1,7 @@
 import { NextConfig } from "next/dist/server/config";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  serverExternalPackages: ["better-sqlite3"],
   images: {
     unoptimized: true,
   },

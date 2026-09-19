@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.git
+.gitignore
+data
+.env.production
+supabase
+.vscode
+functions

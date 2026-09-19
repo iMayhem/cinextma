@@ -1,0 +1,14 @@
+streamaggregator.in {
+	encode zstd gzip
+
+	# Scraper (Kotlin) API endpoints -> scraper-api container
+	@scraper_api path /api/scrape* /api/token* /api/proxy* /api/status* /api/reload* /api/search* /api/home* /api/details* /api/providers* /api/config*
+	handle @scraper_api {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# Everything else (site pages, /api/subs, /api/hls, /api/history, /api/auth/*)
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}

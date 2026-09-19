@@ -1,0 +1,32 @@
+services:
+  scraper-api:
+    build: ../scrapers-api
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      TOKEN_SECRET: ${TOKEN_SECRET:-please_change_me}
+    volumes:
+      - plugins:/app/plugins
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  frontend:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_TMDB_ACCESS_TOKEN: ${NEXT_PUBLIC_TMDB_ACCESS_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - scraper-api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_TMDB_ACCESS_TOKEN: ${NEXT_PUBLIC_TMDB_ACCESS_TOKEN}
+      JWT_SECRET: ${JWT_SECRET:-please_change_me}
+      SCRAPERS_BASE: http://scraper-api:8080
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  plugins:
