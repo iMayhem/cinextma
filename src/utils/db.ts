@@ -1,20 +1,39 @@
-import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
+type DatabaseType = any;
+let DatabaseCtor: any = null;
+// Lazy + eval-guarded so bundlers (next-on-pages/workerd) never statically
+// include the native better-sqlite3 addon. Only called from auth/history
+// API routes; never from pages.
+function loadDatabaseCtor(): any {
+  if (!DatabaseCtor) {
+    // eslint-disable-next-line no-eval
+    const req = eval("require");
+    const mod = req("better-sqlite3");
+    DatabaseCtor = mod.default || mod;
+  }
+  return DatabaseCtor;
+}
+
 const DATA_DIR = path.join(process.cwd(), "data");
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch {
+  // Workers / read-only filesystems: DB file ops fail lazily inside getDb instead.
 }
 
 const DB_PATH = path.join(DATA_DIR, "streamaggregator.db");
 
-let dbInstance: Database.Database | null = null;
+let dbInstance: DatabaseType | null = null;
 
-export function getDb(): Database.Database {
+export function getDb(): DatabaseType {
   if (!dbInstance) {
-    dbInstance = new Database(DB_PATH);
+    var Ctor = loadDatabaseCtor();
+    dbInstance = new Ctor(DB_PATH);
     dbInstance.pragma("journal_mode = WAL");
 
     // Initialize tables
