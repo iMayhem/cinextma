@@ -34,12 +34,12 @@ function TvShowPlayerInner() {
     enabled: !!id && !!season,
   });
 
-  const EPISODE = seasonDetail?.episodes?.find(
+  const historyEpisode = seasonDetail?.episodes?.find(
     (e: any) => e.episode_number.toString() === episode.toString(),
   );
 
   useEffect(() => {
-    if (tv && EPISODE && id && season && episode) {
+    if (tv && historyEpisode && id && season && episode) {
       fetch("/api/history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,11 +51,11 @@ function TvShowPlayerInner() {
           backdrop_path: tv.backdrop_path,
           season: season,
           episode: episode,
-          episode_title: EPISODE.name,
+          episode_title: historyEpisode.name,
         }),
       }).catch(() => {});
     }
-  }, [tv, EPISODE, id, season, episode]);
+  }, [tv, historyEpisode, id, season, episode]);
 
   if (!id || !season || !episode) notFound();
 

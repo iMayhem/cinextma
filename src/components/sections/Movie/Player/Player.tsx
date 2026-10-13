@@ -3,11 +3,11 @@
 import { siteConfig } from "@/config/site";
 import { cn } from "@/utils/helpers";
 import { mutateMovieTitle } from "@/utils/movies";
-import { pickBest, qualityRank, resolvePlayableUrl, type ScrapedLink } from "@/utils/scrape";
+import { autoPickIndex, autoRankLess, pickBest, resolvePlayableUrl, type ScrapedLink } from "@/utils/scrape";
 import { useScrapeLinks } from "@/hooks/useScrapeLinks";
 import { useSubtitles } from "@/hooks/useSubtitles";
 import type { PlayersProps } from "@/types";
-import { Card, Skeleton, Spinner } from "@heroui/react";
+import { Card, Skeleton } from "@heroui/react";
 import { useDisclosure, useDocumentTitle, useIdle } from "@mantine/hooks";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +17,6 @@ import { SpacingClasses } from "@/utils/constants";
 
 const MoviePlayerHeader = dynamic(() => import("./Header"));
 const MoviePlayerSourceSelection = dynamic(() => import("./SourceSelection"));
-const SourceList = dynamic(() => import("../../Player/SourceList"));
 const NetflixPlayer = dynamic(() => import("../../Player/NetflixPlayer"));
 
 interface MoviePlayerProps {
@@ -36,7 +35,16 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
   const [selectedSource, setSelectedSource] = useState(0);
   const [src, setSrc] = useState<string>("");
   const [srcDirect, setSrcDirect] = useState(false);
+  const [userPicked, setUserPicked] = useState(false);
   const fallbackRef = useRef(false);
+  const linksRef = useRef(links);
+  linksRef.current = links;
+  const userPickedRef = useRef(false);
+  const settledRef = useRef(false);
+  const triedRef = useRef<Set<number>>(new Set());
+  const autoTriesRef = useRef(0);
+  const playedRef = useRef(false);
+  const handlePlayerErrorRef = useRef<() => void>(() => {});
 
   useDocumentTitle(`Play ${title} | ${siteConfig.name}`);
 
@@ -44,6 +52,11 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
   useEffect(() => {
     setSrc("");
     setSelectedSource(0);
+    setUserPicked(false);
+    userPickedRef.current = false;
+    settledRef.current = false;
+    triedRef.current = new Set();
+    autoTriesRef.current = 0;
   }, [movie.id]);
 
   const players: PlayersProps[] = useMemo(
@@ -65,8 +78,9 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
 
   const selectSource = useCallback(
     (index: number) => {
-      // hard-stop old stream immediately to prevent background audio
       setSrc("");
+      setUserPicked(true);
+      userPickedRef.current = true;
       setSelectedSource(index);
       abort();
     },
@@ -78,6 +92,20 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
     [links, selectedSource],
   );
 
+  // Auto-pick the smallest available link shortly after links start arriving
+  // (links stream in live; smallest file starts fastest on mobile).
+  useEffect(() => {
+    if (userPicked || settledRef.current || links.length === 0) return;
+    const t = setTimeout(() => {
+      if (userPickedRef.current || settledRef.current) return;
+      const cur = linksRef.current;
+      if (cur.length === 0) return;
+      setSelectedSource(autoPickIndex(cur));
+      settledRef.current = true;
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [links.length, userPicked]);
+
   useEffect(() => {
     let cancelled = false;
     if (!PLAYER) {
@@ -85,6 +113,8 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
       return;
     }
     fallbackRef.current = false;
+    playedRef.current = false;
+    triedRef.current.add(links.indexOf(PLAYER));
     const direct = Boolean(PLAYER.direct);
     resolvePlayableUrl(PLAYER).then((url) => {
       if (!cancelled) {
@@ -92,21 +122,43 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
         setSrcDirect(direct);
       }
     });
+    // Stall watchdog: if the source never starts playing after 12s,
+    // treat as failure and try the next source.
+    const stallTimer = setTimeout(() => {
+      if (cancelled) return;
+      try {
+        const vids = Array.from(document.querySelectorAll("video"));
+        if (vids.length === 0) return;
+        const stalled = vids.every((v) => v.readyState < 2);
+        if (stalled && !playedRef.current) handlePlayerErrorRef.current();
+      } catch {
+        /* ignore */
+      }
+    }, 12000);
     return () => {
       cancelled = true;
+      clearTimeout(stallTimer);
     };
   }, [PLAYER]);
 
   const handlePlayerError = useCallback(() => {
-    if (!srcDirect || fallbackRef.current || !PLAYER) return;
-    fallbackRef.current = true;
-    resolvePlayableUrl(PLAYER, true).then((url) => {
-      setSrc(url);
-      setSrcDirect(false);
-    });
-  }, [srcDirect, PLAYER]);
+    // Auto-advance through playable sources (max 4 tries). Manually picked
+    // sources keep the player's own retry UI instead.
+    if (userPickedRef.current || autoTriesRef.current >= 6) return;
+    const cur = linksRef.current;
+    const tried = triedRef.current;
+    let best = -1;
+    for (let i = 0; i < cur.length; i++) {
+      if (tried.has(i)) continue;
+      if (best < 0) { best = i; continue; }
+      if (autoRankLess(cur[i], cur[best])) best = i;
+    }
+    if (best < 0) return;
+    autoTriesRef.current += 1;
+    setSelectedSource(best);
+  }, []);
+  handlePlayerErrorRef.current = handlePlayerError;
 
-  const loading = status === "idle" || status === "scraping";
   const noSources = status === "done" && links.length === 0;
 
   return (
@@ -118,26 +170,20 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
           onOpenSource={handlers.open}
           hidden={idle && !mobile}
         />
-        <div className="mx-auto grid h-[100dvh] w-full max-w-[1700px] grid-rows-[auto_minmax(0,1fr)] gap-4 p-2 md:h-[100dvh] md:grid-cols-[minmax(0,1fr)_400px] md:grid-rows-[minmax(0,1fr)]">
-        <Card shadow="md" radius="none" className="relative aspect-video w-full bg-black md:h-full">
+        <Card shadow="md" radius="none" className="relative h-[100dvh] w-full bg-black">
           <Skeleton className="absolute h-full w-full" />
-          {!loading && PLAYER && src && (
+          {PLAYER && src && (
             <div className="absolute inset-0 z-10">
               <NetflixPlayer
                 src={src}
                 title={title}
                 subtitle={year}
                 onError={handlePlayerError}
+                onPlayStarted={() => { playedRef.current = true; }}
                 quality={PLAYER.quality}
                 subtitles={subtitles}
                 autoPlay
               />
-            </div>
-          )}
-          {loading && (
-            <div className="absolute z-20 flex h-full w-full flex-col items-center justify-center gap-4 bg-black/60">
-              <Spinner size="lg" color="warning" variant="simple" />
-              <p className="text-sm text-white/80">Searching providers for {title}…</p>
             </div>
           )}
           {status === "error" && (
@@ -155,13 +201,6 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie }) => {
             </div>
           )}
         </Card>
-          <SourceList
-            links={links}
-            selected={selectedSource}
-            onSelect={selectSource}
-            loading={loading}
-          />
-        </div>
       </div>
 
       <MoviePlayerSourceSelection

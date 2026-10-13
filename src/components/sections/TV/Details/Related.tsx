@@ -1,17 +1,17 @@
 import SectionTitle from "@/components/ui/other/SectionTitle";
 import { isEmpty } from "@/utils/helpers";
 import { Tab, Tabs } from "@heroui/react";
-import { AppendToResponse, TV, TvShowDetails } from "tmdb-ts/dist/types";
+import { TV } from "tmdb-ts/dist/types";
+import { AppendedTv } from "@/api/tmdb";
 import TvShowRelatedList from "./RelatedList";
 
 interface TvShowRelatedSectionProps {
-  tv: AppendToResponse<TvShowDetails, ("recommendations" | "similar")[], "tvShow">;
+  tv: AppendedTv;
 }
 
 const TvShowRelatedSection: React.FC<TvShowRelatedSectionProps> = ({ tv }) => {
-  // @ts-expect-error: wrong type.
-  const recommendations = tv.recommendations.results as TV[];
-  const similar = tv.similar.results as TV[];
+  const recommendations = (tv.recommendations?.results ?? []) as unknown as TV[];
+  const similar = (tv.similar?.results ?? []) as unknown as TV[];
 
   return (
     <section id="related" className="z-3">

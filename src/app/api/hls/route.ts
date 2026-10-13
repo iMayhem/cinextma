@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const SCRAPERS_BASE = process.env.SCRAPERS_BASE || "http://185.67.20.9.nip.io";
+const SCRAPERS_BASE = process.env.SCRAPERS_BASE || "http://127.0.0.1:8080";
+// Public origin used when rewriting playlist URLs. Never derive this from the
+// incoming request: behind nginx Next sees Host localhost:3100 and would emit
+// unplayable https://localhost:3100/... links.
+const PUBLIC_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL || "https://streamaggregator.in").replace(/\/+$/, "");
 
 /**
  * HLS Proxy — rewrites m3u8 playlists so all segment / sub-playlist URLs
@@ -19,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   if (token) {
     const proxyUrl = `${SCRAPERS_BASE}/api/proxy?token=${encodeURIComponent(token)}`;
-    return proxyFetch(req, proxyUrl, {}, req.nextUrl.toString());
+    return proxyFetch(req, proxyUrl, {});
   }
 
   let customHeaders: Record<string, string> = {};
@@ -27,14 +31,13 @@ export async function GET(req: NextRequest) {
     try { customHeaders = JSON.parse(headersParam); } catch { /* ignore */ }
   }
 
-  return proxyFetch(req, rawUrl!, customHeaders, req.nextUrl.toString());
+  return proxyFetch(req, rawUrl!, customHeaders);
 }
 
 async function proxyFetch(
   req: NextRequest,
   targetUrl: string,
   customHeaders: Record<string, string>,
-  selfBase: string,
 ) {
   const outHeaders: Record<string, string> = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
@@ -51,10 +54,25 @@ async function proxyFetch(
   }
 
   const contentType = resp.headers.get("content-type") || "";
+  const ctLower = contentType.toLowerCase();
+  let pathname = "";
+  try {
+    pathname = new URL(targetUrl).pathname.toLowerCase();
+  } catch {
+    /* ignore */
+  }
+  // Playlists are not always served as .m3u8 / mpegurl: some CDNs use
+  // master.txt, hls.php, or text/plain. Sniff text-ish responses, but only
+  // small ones so mislabeled binary segments are never buffered/decoded.
+  const declaredLen = Number(resp.headers.get("content-length") || "0");
+  const smallEnough = !declaredLen || declaredLen < 4_000_000;
   const isPlaylist =
-    contentType.includes("mpegurl") ||
-    contentType.includes("x-mpegURL") ||
-    targetUrl.split("?")[0].endsWith(".m3u8");
+    smallEnough &&
+    (ctLower.includes("mpegurl") ||
+      ctLower.includes("text/") ||
+      ctLower.includes("octet-stream") ||
+      ctLower === "" ||
+      /\.(m3u8?|txt)$/.test(pathname));
 
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -64,11 +82,20 @@ async function proxyFetch(
   };
 
   if (isPlaylist) {
-    const text = await resp.text();
-    const rewritten = rewriteM3u8(text, targetUrl, selfBase, customHeaders);
-    return new NextResponse(rewritten, {
+    // Buffer as bytes and sniff ASCII header so a mislabeled binary body is
+    // passed through byte-for-byte instead of being decoded/re-encoded.
+    const buf = Buffer.from(await resp.arrayBuffer());
+    const head = buf.subarray(0, 64).toString("utf8").trimStart();
+    if (head.startsWith("#EXTM3U")) {
+      const rewritten = rewriteM3u8(buf.toString("utf8"), targetUrl, customHeaders);
+      return new NextResponse(rewritten, {
+        status: resp.status,
+        headers: { "Content-Type": "application/vnd.apple.mpegurl", ...corsHeaders },
+      });
+    }
+    return new NextResponse(buf, {
       status: resp.status,
-      headers: { "Content-Type": "application/vnd.apple.mpegurl", ...corsHeaders },
+      headers: { "Content-Type": contentType || "application/octet-stream", ...corsHeaders },
     });
   }
 
@@ -85,22 +112,29 @@ async function proxyFetch(
 function rewriteM3u8(
   playlist: string,
   originalUrl: string,
-  selfBase: string,
   headers: Record<string, string>,
 ): string {
   const base = new URL(originalUrl);
   const headersJson = Object.keys(headers).length > 0 ? JSON.stringify(headers) : null;
-  const selfUrl = new URL(selfBase);
-  const proxyBase = `${selfUrl.origin}/api/hls`;
+  const proxyBase = `${PUBLIC_ORIGIN}/api/hls`;
 
-  return playlist.split("\n").map((line) => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) return line;
+  const proxyUri = (uri: string): string => {
     let absolute: string;
-    try { absolute = new URL(trimmed, base).toString(); } catch { return line; }
+    try { absolute = new URL(uri, base).toString(); } catch { return uri; }
     const params = new URLSearchParams({ url: absolute });
     if (headersJson) params.set("headers", headersJson);
     return `${proxyBase}?${params.toString()}`;
+  };
+
+  return playlist.split("\n").map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return line;
+    if (trimmed.startsWith("#")) {
+      // Rewrite URI="..." attributes on tags like EXT-X-KEY / EXT-X-MAP /
+      // EXT-X-MEDIA / EXT-X-I-FRAME-STREAM-INF as well.
+      return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${proxyUri(uri)}"`);
+    }
+    return proxyUri(trimmed);
   }).join("\n");
 }
 

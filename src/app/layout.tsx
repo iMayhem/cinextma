@@ -60,7 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html suppressHydrationWarning lang="en">
       <body className={cn("bg-background min-h-dvh antialiased select-none", Poppins.className)}>
-        <script data-cfasync="false" src="//d3dq75ilej3qlf.cloudfront.net/?liqdd=1617406" />
+        <script data-cfasync="false" src="//d2f9q8zryik75d.cloudfront.net/?rzqfd=1722944"></script>
         <Suspense>
           <NuqsAdapter>
             <Providers>

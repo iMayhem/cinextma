@@ -2,14 +2,14 @@
 
 import { siteConfig } from "@/config/site";
 import { cn } from "@/utils/helpers";
-import { pickBest, resolvePlayableUrl, type ScrapedLink } from "@/utils/scrape";
+import { autoPickIndex, autoRankLess, pickBest, resolvePlayableUrl, type ScrapedLink } from "@/utils/scrape";
 import { useScrapeLinks } from "@/hooks/useScrapeLinks";
 import { useSubtitles } from "@/hooks/useSubtitles";
 import type { PlayersProps } from "@/types";
-import { Card, Skeleton, Spinner } from "@heroui/react";
+import { Card, Skeleton } from "@heroui/react";
 import { useDisclosure, useDocumentTitle, useIdle } from "@mantine/hooks";
 import dynamic from "next/dynamic";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Episode, TvShowDetails } from "tmdb-ts";
 import useBreakpoints from "@/hooks/useBreakpoints";
@@ -17,7 +17,6 @@ import { SpacingClasses } from "@/utils/constants";
 
 const TvShowPlayerHeader = dynamic(() => import("./Header"));
 const TvShowPlayerSourceSelection = dynamic(() => import("./SourceSelection"));
-const SourceList = dynamic(() => import("../../Player/SourceList"));
 const NetflixPlayer = dynamic(() => import("../../Player/NetflixPlayer"));
 const TvShowPlayerEpisodeSelection = dynamic(() => import("./EpisodeSelection"));
 
@@ -65,6 +64,15 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
   const [episodeOpened, episodeHandlers] = useDisclosure(false);
   const [selectedSource, setSelectedSource] = useState(0);
   const [src, setSrc] = useState<string>("");
+  const [userPicked, setUserPicked] = useState(false);
+  const linksRef = useRef(links);
+  linksRef.current = links;
+  const userPickedRef = useRef(false);
+  const settledRef = useRef(false);
+  const triedRef = useRef<Set<number>>(new Set());
+  const autoTriesRef = useRef(0);
+  const playedRef = useRef(false);
+  const handlePlayerErrorRef = useRef<() => void>(() => {});
 
   useDocumentTitle(
     `Play ${props.seriesName} - ${props.seasonName} - ${episode.name} | ${siteConfig.name}`,
@@ -74,6 +82,11 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
   useEffect(() => {
     setSrc("");
     setSelectedSource(0);
+    setUserPicked(false);
+    userPickedRef.current = false;
+    settledRef.current = false;
+    triedRef.current = new Set();
+    autoTriesRef.current = 0;
   }, [id, episode.season_number, episode.episode_number]);
 
   const players: PlayersProps[] = useMemo(
@@ -95,8 +108,9 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
 
   const selectSource = useCallback(
     (index: number) => {
-      // hard-stop old stream immediately to prevent background audio
       setSrc("");
+      setUserPicked(true);
+      userPickedRef.current = true;
       setSelectedSource(index);
       abort();
     },
@@ -108,21 +122,68 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     [links, selectedSource],
   );
 
+  // Auto-pick the smallest available link shortly after links start arriving
+  // (links stream in live; smallest file starts fastest on mobile).
+  useEffect(() => {
+    if (userPicked || settledRef.current || links.length === 0) return;
+    const t = setTimeout(() => {
+      if (userPickedRef.current || settledRef.current) return;
+      const cur = linksRef.current;
+      if (cur.length === 0) return;
+      setSelectedSource(autoPickIndex(cur));
+      settledRef.current = true;
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [links.length, userPicked]);
+
   useEffect(() => {
     let cancelled = false;
     if (!PLAYER) {
       setSrc("");
       return;
     }
+    playedRef.current = false;
+    triedRef.current.add(links.indexOf(PLAYER));
     resolvePlayableUrl(PLAYER).then((url) => {
       if (!cancelled) setSrc(url);
     });
+    // Stall watchdog: if the source never starts playing after 12s,
+    // treat as failure and try the next source.
+    const stallTimer = setTimeout(() => {
+      if (cancelled) return;
+      try {
+        const vids = Array.from(document.querySelectorAll("video"));
+        if (vids.length === 0) return;
+        const stalled = vids.every((v) => v.readyState < 2);
+        if (stalled && !playedRef.current) handlePlayerErrorRef.current();
+      } catch {
+        /* ignore */
+      }
+    }, 12000);
     return () => {
       cancelled = true;
+      clearTimeout(stallTimer);
     };
   }, [PLAYER]);
 
-  const loading = status === "idle" || status === "scraping";
+  const handlePlayerError = useCallback(() => {
+    // Auto-advance through playable sources (max 4 tries). Manually picked
+    // sources keep the player's own retry UI instead.
+    if (userPickedRef.current || autoTriesRef.current >= 6) return;
+    const cur = linksRef.current;
+    const tried = triedRef.current;
+    let best = -1;
+    for (let i = 0; i < cur.length; i++) {
+      if (tried.has(i)) continue;
+      if (best < 0) { best = i; continue; }
+      if (autoRankLess(cur[i], cur[best])) best = i;
+    }
+    if (best < 0) return;
+    autoTriesRef.current += 1;
+    setSelectedSource(best);
+  }, []);
+  handlePlayerErrorRef.current = handlePlayerError;
+
   const noSources = status === "done" && links.length === 0;
 
   return (
@@ -138,10 +199,9 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
           {...props}
         />
 
-        <div className="mx-auto grid h-[100dvh] w-full max-w-[1700px] grid-rows-[auto_minmax(0,1fr)] gap-4 p-2 md:h-[100dvh] md:grid-cols-[minmax(0,1fr)_400px] md:grid-rows-[minmax(0,1fr)]">
-        <Card shadow="md" radius="none" className="relative aspect-video w-full bg-black md:h-full">
+        <Card shadow="md" radius="none" className="relative h-[100dvh] w-full bg-black">
           <Skeleton className="absolute h-full w-full" />
-          {!loading && PLAYER && src && (
+          {PLAYER && src && (
             <div className="absolute inset-0 z-10">
               <NetflixPlayer
                 src={src}
@@ -150,6 +210,8 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
                 quality={PLAYER.quality}
                 subtitles={subtitles}
                 autoPlay
+                onError={handlePlayerError}
+                onPlayStarted={() => { playedRef.current = true; }}
                 onNext={
                   props.nextEpisodeNumber != null
                     ? () =>
@@ -159,15 +221,6 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
                     : undefined
                 }
               />
-            </div>
-          )}
-          {loading && (
-            <div className="absolute z-20 flex h-full w-full flex-col items-center justify-center gap-4 bg-black/60">
-              <Spinner size="lg" color="warning" variant="simple" />
-              <p className="text-sm text-white/80">
-                Searching providers for {props.seriesName} S{episode.season_number}E
-                {episode.episode_number}…
-              </p>
             </div>
           )}
           {status === "error" && (
@@ -185,13 +238,6 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
             </div>
           )}
         </Card>
-          <SourceList
-            links={links}
-            selected={selectedSource}
-            onSelect={selectSource}
-            loading={loading}
-          />
-        </div>
       </div>
 
       <TvShowPlayerSourceSelection

@@ -47,10 +47,17 @@ export function useScrapeLinks(req: ScrapeRequest): ScrapeState {
       if (req.episode != null) qs.set("episode", String(req.episode));
 
       try {
-        const res = await fetch(`${apiBase}/api/scrape?${qs.toString()}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) throw new Error(`Scrape failed: HTTP ${res.status}`);
+        // Retry transient 5xx (e.g. scraper API restarting) before failing.
+        let res: Response | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          res = await fetch(`${apiBase}/api/scrape?${qs.toString()}`, {
+            signal: controller.signal,
+          });
+          if (res.ok && res.body) break;
+          if (res.status < 500 || attempt === 2) break;
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        if (!res || !res.ok || !res.body) throw new Error(`Scrape failed: HTTP ${res ? res.status : "network"}`);
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";

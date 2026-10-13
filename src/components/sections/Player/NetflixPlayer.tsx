@@ -19,6 +19,7 @@ interface NetflixPlayerProps {
   autoPlay?: boolean;
   onNext?: () => void;
   onError?: () => void;
+  onPlayStarted?: () => void;
   subtitles?: SubtitleTrack[];
   onSubtitleChange?: (track: SubtitleTrack | null) => void;
 }
@@ -109,11 +110,14 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
   autoPlay = true,
   onNext,
   onError,
+  onPlayStarted,
   subtitles = [],
   onSubtitleChange,
 }) => {
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+  const onPlayStartedRef = useRef(onPlayStarted);
+  onPlayStartedRef.current = onPlayStarted;
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -170,7 +174,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
       });
     };
 
-    if (src.includes(".m3u8") && Hls.isSupported()) {
+    if ((src.includes(".m3u8") || src.includes("/api/hls")) && Hls.isSupported()) {
       hlsRef.current?.destroy();
       const hls = new Hls({
         enableWorker: true,
@@ -336,7 +340,10 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
       setMuted(v.muted);
     };
     const onWaiting = () => setWaiting(true);
-    const onPlaying = () => setWaiting(false);
+    const onPlaying = () => {
+      setWaiting(false);
+      onPlayStartedRef.current?.();
+    };
     const onProgress = () => {
       const arr: [number, number][] = [];
       for (let i = 0; i < v.buffered.length; i++) arr.push([v.buffered.start(i), v.buffered.end(i)]);
@@ -533,7 +540,7 @@ const NetflixPlayer: React.FC<NetflixPlayerProps> = ({
     >
       <video
         ref={videoRef}
-        src={src.includes(".m3u8") ? undefined : src}
+        src={src.includes(".m3u8") || src.includes("/api/hls") ? undefined : src}
         autoPlay={autoPlay}
         playsInline
         preload="auto"

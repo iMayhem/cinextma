@@ -27,6 +27,57 @@ export function qualityRank(quality?: string): number {
   return 0;
 }
 
+/** Numeric size in bytes for ordering (unknown size sorts last). */
+export function linkSizeBytes(link: ScrapedLink): number {
+  if (typeof link.sizeBytes === "number" && link.sizeBytes > 0) return link.sizeBytes;
+  const text = `${link.size || ""} ${link.server || ""}`;
+  const match = text.match(/(\d+(?:\.\d+)?)\s*(TB|GB|MB|KB)\b/i);
+  if (!match) return Number.POSITIVE_INFINITY;
+  const val = parseFloat(match[1]);
+  const unit = match[2].toUpperCase();
+  if (unit === "TB") return val * 1024 ** 4;
+  if (unit === "GB") return val * 1024 ** 3;
+  if (unit === "MB") return val * 1024 ** 2;
+  if (unit === "KB") return val * 1024;
+  return Number.POSITIVE_INFINITY;
+}
+
+/** Browsers can't decode mkv — rank containers so autoplay avoids them. */
+function containerRank(link: ScrapedLink): number {
+  const u = (link.url || "").toLowerCase().split("?")[0];
+  if (link.type === "hls" || u.endsWith(".m3u8")) return 0;
+  if (u.endsWith(".mkv")) return 4;
+  if (u.endsWith(".mp4") || u.endsWith(".webm") || (link.type || "").toLowerCase() === "mp4") return 1;
+  return 2;
+}
+
+function sizeTier(bytes: number): number {
+  if (!Number.isFinite(bytes)) return 1; // unknown: between small and huge
+  return bytes > 8 * 1024 ** 3 ? 2 : 0;
+}
+
+export function autoRank(link: ScrapedLink): [number, number, number] {
+  const b = linkSizeBytes(link);
+  return [containerRank(link), sizeTier(b), b];
+}
+
+function rankLess(a: [number, number, number], b: [number, number, number]): boolean {
+  return a[0] < b[0] || (a[0] === b[0] && (a[1] < b[1] || (a[1] === b[1] && a[2] < b[2])));
+}
+
+export function autoRankLess(a: ScrapedLink, b: ScrapedLink): boolean {
+  return rankLess(autoRank(a), autoRank(b));
+}
+
+/** Index of the best link to autoplay: playable container first, then smallest. */
+export function autoPickIndex(links: ScrapedLink[]): number {
+  let best = 0;
+  for (let i = 1; i < links.length; i++) {
+    if (autoRankLess(links[i], links[best])) best = i;
+  }
+  return best;
+}
+
 export function pickBest(links: ScrapedLink[]): ScrapedLink | null {
   if (!links.length) return null;
   return [...links].sort((a, b) => {
@@ -67,7 +118,8 @@ export function isMkvLink(link: ScrapedLink): boolean {
 }
 
 export async function resolvePlayableUrl(link: ScrapedLink, forceProxy = false): Promise<string> {
-  if (!forceProxy && link.direct) return link.url;
+  // All playback routes through our VPS proxy (CDN farms block browsers).
+  void forceProxy;
 
   const isHls =
     link.type === "hls" ||
