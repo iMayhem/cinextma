@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const SCRAPERS_BASE = process.env.SCRAPERS_BASE || "http://127.0.0.1:8080";
+const SCRAPERS_BASE = process.env.SCRAPERS_BASE || "https://streamaggregator.in";
 // Public origin used when rewriting playlist URLs. Never derive this from the
 // incoming request: behind nginx Next sees Host localhost:3100 and would emit
 // unplayable https://localhost:3100/... links.
